@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>产值可动区间测算器（B204-1 / 205-1 审核口径）</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px 12px 48px; background:#f2f4f8; font-family:"Microsoft YaHei","微软雅黑",SimSun,Arial,sans-serif; color:#222; }
+  .wrap { max-width:980px; margin:0 auto; }
+  .head { text-align:center; margin-bottom:20px; }
+  .head h1 { font-size:22px; margin:0 0 6px; color:#17365d; }
+  .head p { margin:0; color:#66707c; font-size:13px; }
+  .card { background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(30,50,90,.08); padding:18px 20px; margin-bottom:18px; }
+  .card h2 { font-size:16px; margin:0 0 14px; color:#17365d; border-left:4px solid #2b6cb0; padding-left:8px; }
+  .grid { display:flex; flex-wrap:wrap; margin:-6px; }
+  .fld { width:50%; padding:6px; }
+  .fld label { display:block; font-size:13px; color:#333; margin-bottom:4px; }
+  .fld label .hint { color:#98a2ad; font-size:12px; font-weight:normal; }
+  .fld input, .fld select { width:100%; padding:7px 9px; font-size:14px; border:1px solid #c9d2dc; border-radius:6px; outline:none; background:#fbfdff; }
+  .fld input:focus, .fld select:focus { border-color:#2b6cb0; background:#fff; }
+  .fld input.probe { border-color:#e0a800; background:#fffdf3; }
+  .btns { margin-top:14px; text-align:center; }
+  button { font-size:15px; padding:9px 22px; border-radius:8px; border:none; cursor:pointer; margin:4px 6px; }
+  .btn-main { background:#2b6cb0; color:#fff; font-weight:bold; }
+  .btn-main:hover { background:#22548a; }
+  .btn-2 { background:#e8eef6; color:#2b4a72; }
+  .btn-2:hover { background:#dbe6f3; }
+  .btn-copy { background:#e6f4ea; color:#1e7b34; }
+  .rangebox { display:flex; flex-wrap:wrap; margin:-6px; }
+  .rbox { flex:1 1 44%; margin:6px; border-radius:10px; padding:14px 16px; }
+  .rbox.conservative { background:#fef6e7; border:1px solid #f0d9a8; }
+  .rbox.recommend { background:#eaf5ee; border:1px solid #bfe3cb; }
+  .rbox .t { font-size:13px; color:#7a6a3a; }
+  .rbox.recommend .t { color:#3a6b4a; }
+  .rbox .v { font-size:24px; font-weight:bold; color:#8a6d1f; margin:6px 0 4px; }
+  .rbox.recommend .v { color:#1f6b3a; }
+  .rbox .d { font-size:12px; color:#777; line-height:1.5; }
+  table { width:100%; border-collapse:collapse; margin-top:6px; }
+  th, td { border:1px solid #dfe6ee; padding:6px 8px; font-size:13px; vertical-align:top; }
+  th { background:#eef3f9; color:#33506f; font-weight:bold; text-align:center; }
+  td.num { text-align:right; white-space:nowrap; }
+  td.ctr { text-align:center; white-space:nowrap; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold; }
+  .b-red { background:#fdecea; color:#b3261e; }
+  .b-green { background:#e6f4ea; color:#1e7b34; }
+  .b-orange { background:#fff3e0; color:#b25e00; }
+  .b-gray { background:#eceff3; color:#666; }
+  .trigger-list { margin-top:8px; }
+  .titem { border-left:5px solid #e0a800; background:#fffdf3; border-radius:6px; padding:10px 12px; margin-bottom:10px; }
+  .titem.b { border-left-color:#d6453d; background:#fdf1f0; }
+  .titem .tname { font-weight:bold; font-size:14px; }
+  .titem .tmeta { font-size:12px; color:#666; margin-top:2px; }
+  .titem .tsug { font-size:13px; margin-top:6px; color:#333; }
+  .okbox { border-left:5px solid #2e9e4f; background:#eefaf1; border-radius:6px; padding:12px 14px; font-size:14px; color:#1e6b38; }
+  .warnbox { border-left:5px solid #999; background:#f5f7fa; border-radius:6px; padding:10px 14px; font-size:13px; color:#555; margin-top:10px; }
+  .legend { font-size:12px; color:#777; margin-top:10px; line-height:1.7; }
+  .legend b { color:#444; }
+  .hidden { display:none; }
+  .foot { text-align:center; color:#98a2ad; font-size:12px; margin-top:12px; line-height:1.8; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>产值可动区间测算器</h1>
+    <p>B204-1表、205-1表审核口径 ｜ 输入企业数据 → 自动算出"可动区间"并列出会触发的查询</p>
+  </div>
+
+  <div class="card">
+    <h2>第一步：填写企业数据（万元，填真实口径）</h2>
+    <div style="font-size:13px;color:#33506f;font-weight:bold;margin:6px 2px;">▸ 基本数据（按报表口径填写；没有的项可留空）</div>
+    <div class="grid">
+      <div class="fld"><label>企业名称 <span class="hint">（选填）</span></label><input id="f_Ent" value=""></div>
+      <div class="fld"><label>本期月产值 <span class="hint">（如报9月填9月当月；只查拟报数时可不填）</span></label><input id="f_X0" value="1430"></div>
+      <div class="fld"><label>去年同月产值 <span class="hint">（如报9月填上年9月当月；系统已复制不可改）</span></label><input id="f_Ply" value="1610"></div>
+      <div class="fld"><label>上月行业小类行产值 <span class="hint">（如报9月填8月该行业行当月值；没有可留空）</span></label><input id="f_Ind" value="1000"></div>
+      <div class="fld"><label>前三月·最早月（-3月）产值 <span class="hint">（如报9月填6月当月）</span></label><input id="f_m3" value="950"></div>
+      <div class="fld"><label>前三月·上上月（-2月）产值 <span class="hint">（如报9月填7月当月）</span></label><input id="f_m2" value="850"></div>
+      <div class="fld"><label>前三月·上月（-1月）产值 <span class="hint">（如报9月填8月当月）</span></label><input id="f_m1" value="900"></div>
+      <div class="fld"><label>上月止累计产值 <span class="hint">（填"1-上月"，如报9月填1-8；别填成上月单月）</span></label><input id="f_PrevCum" value="6678"></div>
+      <div class="fld"><label>本期累计产值（1-本月，真实）<span class="hint">（如报9月填1-9月累计）</span></label><input id="f_XC" value="8108"></div>
+      <div class="fld"><label>去年同期累计产值 <span class="hint">（上年同期累计，如报9月填上年1-9）</span></label><input id="f_XCly" value="9630"></div>
+      <div class="fld"><label>累计是否同步调整 <span class="hint">（调整本月时：1-本月累计=上月止累计+本月；默认"是"）</span></label>
+        <select id="f_cumSync"><option value="1" selected>是（推荐）</option><option value="0">否</option></select></div>
+      <div class="fld"><label>本期真实销售产值 <span class="hint">（如报9月填9月当月，不是累计）</span></label><input id="f_Sreal" value="1430"></div>
+      <div class="fld"><label>去年同月销售产值 <span class="hint">（如报9月填上年9月当月）</span></label><input id="f_Sly" value="1590"></div>
+      <div class="fld"><label>用电当月同比% <span class="hint">（当月比当月；如 -5 表示下降5%；没有可留空）</span></label><input id="f_Gpow" value="-5"></div>
+      <div class="fld"><label>是否万吨用能企业 <span class="hint">（综合能耗≥1万吨标煤）</span></label>
+        <select id="f_wand"><option value="1" selected>是</option><option value="0">否</option></select></div>
+      <div class="fld"><label>是否需要填报产品产量 <span class="hint">（主要工业产品产量）</span></label>
+        <select id="f_hasProd" onchange="toggleProd()"><option value="1" selected>需要填报（是）</option><option value="0">不需要（否）</option></select></div>
+      <div class="fld"><label>往期参考上限（万元，可留空）<span class="hint">（系统内部参考值，一般未知；拿不到就留空）</span></label><input id="f_ref" value=""></div>
+    </div>
+    <div id="prodHead" style="font-size:13px;color:#33506f;font-weight:bold;margin:12px 2px 6px;">▸ 产品产量数据（选择"需要填报"时填写；按《规模以上工业产品产量目录》口径，只填主要产品）</div>
+    <div class="grid" id="prodBlock">
+      <div class="fld"><label>产品本月产量 <span class="hint">（如报9月填9月当月；主要产品）</span></label><input id="f_P1" value="5000"></div>
+      <div class="fld"><label>产品1-本月累计产量 <span class="hint">（如报9月填1-9月累计）</span></label><input id="f_P2" value="46000"></div>
+      <div class="fld"><label>产品去年同月产量（同期本月） <span class="hint">（如报9月填上年9月当月）</span></label><input id="f_P3" value="5200"></div>
+      <div class="fld"><label>产品上月止累计产量 <span class="hint">（如报9月填1-8月累计）</span></label><input id="f_P4" value="41000"></div>
+    </div>
+    <div style="font-size:13px;color:#33506f;font-weight:bold;margin:12px 2px 6px;">▸ 测算目标</div>
+    <div class="grid">
+      <div class="fld"><label>拟报数（万元）<span class="hint">（想查的金额；留空则按"本期月产值"检查）</span></label><input id="f_probe" class="probe" value="2430"></div>
+    </div>
+    <p style="font-size:12px;color:#98a2ad;margin:10px 2px 0;">※ 备注均以"报9月"举例，其他月份顺推（如报10月：上月止累计填1-9，依此类推）。有的企业没有的数据（如企业名称、上月行业小类行、前三月、销售等）可以留空，对应约束会自动标"不适用"并跳过；不填报产品产量的企业，选"不需要（否）"即可。产品间关系式（88组）、单产品上限（599条）等由系统内置，需以系统提示为准。</p>
+    <div class="btns">
+      <button class="btn-main" onclick="calc()">开始测算</button>
+      <button class="btn-2" onclick="fillDemo()">填入示例</button>
+      <button class="btn-2" onclick="clearAll()">清空</button>
+      <button class="btn-copy" id="copyBtn" onclick="copyResult()" style="display:none">复制结果</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="resultCard">
+    <h2>第二步：测算结果</h2>
+    <div class="rangebox">
+      <div class="rbox conservative" id="bandBox1">
+        <div class="t" id="r_b1t">保守口径（累计不随调整）</div>
+        <div class="v" id="r_band1">—</div>
+        <div class="d" id="r_band1d">—</div>
+      </div>
+      <div class="rbox recommend" id="bandBox2">
+        <div class="t">推荐口径（累计同步调整）</div>
+        <div class="v" id="r_band2">—</div>
+        <div class="d" id="r_band2d">—</div>
+      </div>
+    </div>
+    <div class="warnbox" id="bindingBox" style="display:none"></div>
+
+    <h2 style="margin-top:20px">约束明细（免触发上/下界）</h2>
+    <table>
+      <tr><th style="width:24%">监控维度</th><th style="width:12%">规则编号</th><th style="width:12%">上界<br>（超过触发）</th><th style="width:12%">下界<br>（低于触发）</th><th style="width:12%">拟报数检查</th><th style="width:9%">类别</th><th>触发条件说明</th></tr>
+      <tbody id="tbody"></tbody>
+    </table>
+
+    <h2 style="margin-top:20px">预计会触发的查询</h2>
+    <div id="triggerZone"></div>
+
+    <div class="legend">
+      <b>类别说明：</b>
+      <span class="badge b-red">A类</span> 硬性拦截（报不出去，不可解锁）　
+      <span class="badge b-red">B类</span> 拦截→凭证材料→统计机构解锁后上报　
+      <span class="badge b-orange">C类</span> 可上报，须填写说明（留痕）
+    </div>
+  </div>
+
+  <div class="foot">
+    依据《B204-1表》《205-1表》审核公式配置清单（2026年10月导出）整理。<br>
+    区间仅反映"不触发说明/解锁类审核"的工程边界，随每月锚点数据滚动；统计数据应依法据实填报。<br>
+    配套下载：<a href="产值可动区间测算器.xlsx" style="color:#4a7ab5;">Excel版测算器（.xlsx）</a> ｜ <a href="javascript:window.print()" style="color:#4a7ab5;">打印 / 存PDF</a>
+  </div>
+</div>
+
+<script>
+var C07001_NOTE = '高于"前三月平均×1.05"且高于"去年同月×1.3"（两条都超才触发）；免触发上界=两者较高值';
+var rows = [];
+var results = {};
+
+function num(id) { var v = document.getElementById(id).value; if (v === '' || v === null) return NaN; var f = parseFloat(v); return isNaN(f) ? NaN : f; }
+function fmt(x) { return (Math.round(x * 10) / 10).toFixed(1); }
+
+function calc() {
+  var X0 = num('f_X0'), Ply = num('f_Ply'), m1 = num('f_m1'), m2 = num('f_m2'), m3 = num('f_m3');
+  var Ind = num('f_Ind'), Sreal = num('f_Sreal'), Sly = num('f_Sly');
+  var Ent = String(document.getElementById('f_Ent').value || '').replace(/^\s+|\s+$/g, '');
+  var Gpow = num('f_Gpow');
+  var wand = document.getElementById('f_wand').value === '1';
+  var ref = num('f_ref');
+  var probe = num('f_probe');
+  var hasProd = document.getElementById('f_hasProd').value === '1';
+  var P1 = num('f_P1'), P2 = num('f_P2'), P3 = num('f_P3'), P4 = num('f_P4');
+  var XC = num('f_XC'), XCly = num('f_XCly');
+  var PrevCum = num('f_PrevCum');
+  var cumSync = document.getElementById('f_cumSync').value === '1';
+
+  var probeEff = !isNaN(probe) ? probe : X0;
+  var probeFromX0 = isNaN(probe) && !isNaN(X0);
+  if (isNaN(X0) && isNaN(probe)) {
+    alert('至少填一项："拟报数"（想查的数）和/或"本期月产值"（基准数）。只查某个拟报数时，只填"拟报数"即可。');
+    return;
+  }
+  var hasAvg = !isNaN(m1) && !isNaN(m2) && !isNaN(m3);
+  var avg3 = hasAvg ? (m1 + m2 + m3) / 3 : 0;
+
+  function mk(name, code, cat, up, low, cond, sug, na) {
+    return { name: name, code: code, cat: cat, up: (na ? null : up), low: (na ? null : low), cond: cond, sug: sug, na: !!na };
+  }
+
+  rows = [];
+  if (isNaN(Ply)) {
+    rows.push(mk('单月产值增速组合', 'C07001', 'C', null, null, '无去年同期数（如当年新入库企业、同期未复制），本条不适用（以系统实际为准）', '—', true));
+    rows.push(mk('产值同比≤300%', 'C07002', 'C', null, null, '无去年同期数，本条不适用', '—', true));
+  } else {
+    var note1 = C07001_NOTE;
+    var up1;
+    if (hasAvg) { up1 = Math.max(1.05 * avg3, 1.3 * Ply); }
+    else { up1 = 1.3 * Ply; note1 = '前三月数据不全：按"去年同月×1.3"单线近似（以系统实际提示为准）；' + C07001_NOTE; }
+    rows.push(mk('单月产值增速组合', 'C07001', 'C', up1, null, note1, '核实数据；如属实，需填写原因说明（订单集中、季节性生产、检修后复产等）。'));
+    rows.push(mk('产值同比≤300%', 'C07002', 'C', 4 * Ply, null, '本月 ≥ 去年同月×4（同比+300%）时触发', '核实数据；如属实写说明。'));
+  }
+  if (isNaN(Ind)) {
+    rows.push(mk('行业小类月环比', 'C02013/14', 'C', null, null, '企业无上月行业小类行数据（如无需填报、行别调整、新入库等），本条自动跳过（以系统实际为准）', '—', true));
+  } else {
+    rows.push(mk('行业小类月环比', 'C02013/14', 'C', 1.8 * Ind, 0.5 * Ind, '行业小类行应在上月0.5～1.8倍之间（调增须与分行业行同步修改）', '核实行业行数据；如属实写说明。'));
+  }
+  if (isNaN(Sreal)) {
+    rows.push(mk('产销率（销售不同步调整）', 'C03001/05', 'C', null, null, '未填销售产值，本条暂不计算', '—', true));
+  } else {
+    rows.push(mk('产销率（销售不同步调整）', 'C03001/05', 'C', Sreal / 0.7, Sreal / 1.3, '产销率须在70%～130%：产值≤销售÷0.7，且≥销售÷1.3', '核实产值与销售数据；如属实写说明（本条与"销售同步调整"两条按实际口径取其一）。'));
+  }
+  if (isNaN(Sly)) {
+    rows.push(mk('销售同步调整时（同比）', 'C30003/04', 'C', null, null, '无去年同期销售数，本条不适用', '—', true));
+  } else {
+    rows.push(mk('销售同步调整时（同比）', 'C30003/04', 'C', 1.3 * Sly, 0.3 * Sly, '销售产值同比须在 -70%～+30%（体量>1000万、非新入库企业）', '核实销售数据；如属实写说明。'));
+  }
+  if (cumSync) {
+    rows.push({ name: '累计衔接（同步调整）', code: 'C04001', cat: 'C', up: null, low: null, syncOK: true, cond: '1-本月累计=上月止累计+本月；拟报后累计已按此同步（见下方"拟报后累计"）。同步调整时本条自动满足，不触发。', sug: '保持同步调整即可（累计=上月止累计+本月）。' });
+  } else if (isNaN(X0)) {
+    rows.push(mk('累计衔接（若累计不随调整）', 'C04001', 'C', null, null, '未填"本期月产值"（基准数）："累计不动"口径的±5%边界暂不计算（填上即可启用）。', '建议累计同步调整。', true));
+  } else {
+    rows.push(mk('累计衔接（若累计不随调整）', 'C04001', 'C', X0 / 0.95, X0 / 1.05, '规则：1-本月累计应=上月止累计+本月，容差±5%×本月。只调本月不动累计：调整幅度≤±5%即免触发；累计同步调整（=上月止累计+新本月）则自动满足。', '建议累计同步调整；若不同步，调整幅度控制在±5%内，或写说明。'));
+  }
+  if (isNaN(Ply)) {
+    rows.push(mk('产值与去年差距（当月）', 'C30001', 'C', null, null, '无去年同期数，本条不适用', '—', true));
+  } else {
+    rows.push(mk('产值与去年差距（当月）', 'C30001', 'C', Ply / 0.7, null, '本月 ≥ 去年同月÷0.7（约1.43倍）时触发说明（与去年实际生产情况差距较大）', '核实数据；如属实写说明。'));
+  }
+  if (!isNaN(XCly) && !isNaN(PrevCum)) {
+    var upC2 = XCly / 0.7 - PrevCum;
+    rows.push({ name: '产值与去年差距（累计口径）', code: 'C30002', cat: 'C', up: upC2, low: null, syncOnly: true,
+      cond: '按"累计同步调整"口径：拟报后累计（=上月止累计+本月）≥ 去年同期累计÷0.7（约1.43倍）时触发说明；等效本月上界 = 去年累计÷0.7−上月止累计 = ' + fmt(upC2) + ' 万', sug: '核实数据；如属实写说明。' });
+  } else if (!isNaN(XCly) && !isNaN(XC) && !isNaN(X0)) {
+    var upC2b = XCly / 0.7 - XC + X0;
+    rows.push({ name: '产值与去年差距（累计口径）', code: 'C30002', cat: 'C', up: upC2b, low: null, syncOnly: true,
+      cond: '按"累计同步调整"口径（用真实累计折算）：等效本月上界 = 去年累计÷0.7−今年累计真实+本月真实 = ' + fmt(upC2b) + ' 万（建议补填"上月止累计"更直接）', sug: '核实数据；如属实写说明。' });
+  } else {
+    rows.push(mk('产值与去年差距（累计口径）', 'C30002', 'C', null, null, '缺少累计数据（可留空；填入"上月止累计"和"去年同期累计"后参与计算）', '—', true));
+  }
+  if (!wand) {
+    rows.push(mk('万吨企业电力联动', 'B11550', 'B', null, null, '非万吨企业不适用', '—', true));
+  } else if (isNaN(Ply)) {
+    rows.push(mk('万吨企业电力联动', 'B11550', 'B', null, null, '无去年同期数，本条暂不适用', '—', true));
+  } else if (isNaN(Gpow)) {
+    rows.push(mk('万吨企业电力联动', 'B11550', 'B', null, null, '未填"用电当月同比%"（可留空），本条暂不计算', '—', true));
+  } else {
+    rows.push(mk('万吨企业电力联动', 'B11550', 'B', (1 + Gpow / 100 + 0.2) * Ply, Math.max(0, (1 + Gpow / 100 - 0.2) * Ply),
+      '用电当月同比=' + fmt(Gpow) + '%；触发条件：|产值当月同比 − 用电当月同比| < 20个百分点（依据205-1表）', '核实用电量（发票/供电数据）与产值；无误的需向统计机构提交"准确详细说明"，解锁后上报。'));
+  }
+  rows.push({ name: '往期对比"过高"', code: 'B00009-14', cat: 'B', up: isNaN(ref) ? null : ref, low: null, refUnknown: isNaN(ref),
+    cond: '产值高于系统内部参考值（按企业往期报数计算，一般未知）时触发', sug: '触发即被拦截：准备产值凭证材料，由统计机构核实后解锁。' });
+
+  // ---- 产品产量部分 ----
+  if (hasProd) {
+    var pushProd = function (name, code, cat, trig, cond, sug) {
+      rows.push({ name: name, code: code, cat: cat, up: null, low: null, evalNow: true, trigFlag: trig, cond: cond, sug: sug });
+    };
+    var cond7, trig7 = null;
+    if (isNaN(P1) || isNaN(P3)) { cond7 = '未填写产品产量数据（选择了"需要填报"但数据为空）'; }
+    else if (P3 <= 0) { cond7 = '同期产量为0，同比无法计算（易触发异常，建议核实）'; }
+    else {
+      var r7 = P1 / P3 - 1;
+      trig7 = ((P1 + P3) > 1000) && (r7 > 0.3 || r7 < -0.7);
+      cond7 = '产品同比 = ' + fmt(r7 * 100) + '%（触发条件：>+30% 或 <-70%，且本期+同期>1000）';
+    }
+    pushProd('产品产量同比异常', 'C30007/08', 'C', trig7, cond7, '核实产品产量数据；如属实写说明。');
+    var trig5 = null, cond5;
+    if (isNaN(P1) || isNaN(P2) || isNaN(P4)) { cond5 = '产品数据不全，无法计算'; }
+    else if (P1 <= 0) { trig5 = false; cond5 = '产品本月为0，本条不适用'; }
+    else {
+      var d5 = P2 - P1 - P4;
+      trig5 = Math.abs(d5) > 0.08 * P1;
+      cond5 = '累计-本月-上月累计 = ' + fmt(d5) + '（容差 ±8%×本月 = ' + fmt(0.08 * P1) + '）';
+    }
+    pushProd('产品累计衔接（±8%）', 'C04005', 'C', trig5, cond5, '建议累计同步调整；如不等请写说明。');
+    var trig3 = null, cond3;
+    if (isNaN(P1) || isNaN(P2)) { cond3 = '产品数据不全，无法计算'; }
+    else { trig3 = P2 < P1; cond3 = '累计-当月 = ' + fmt(P2 - P1) + '（应≥0）'; }
+    pushProd('产品累计≥当月', 'B00030', 'B', trig3, cond3, '拦截→凭证材料→统计机构解锁后上报。');
+    var trig4 = null, cond4;
+    if (isNaN(P1) || isNaN(P2)) { cond4 = '产品数据不全，无法计算'; }
+    else { trig4 = (P1 > 0 && P1 === P2); cond4 = '本月与累计' + (P1 === P2 ? '完全相等' : '不相等') + '（6月起严查；防把累计当本月填）'; }
+    pushProd('产品本月≠累计', 'B00034', 'B', trig4, cond4, '拦截→凭证材料→统计机构解锁后上报。');
+    var trig10 = null, cond10;
+    if (isNaN(P2) || isNaN(P4)) { cond10 = '产品数据不全，无法计算'; }
+    else { trig10 = P2 < P4; cond10 = '累计-上期累计 = ' + fmt(P2 - P4) + '（应≥0）'; }
+    pushProd('产品累计≥上期累计', 'C01005', 'C', trig10, cond10, '核实数据；如属实写说明。');
+    var trig6 = null, cond6;
+    if (isNaN(P1) || isNaN(probeEff)) { cond6 = '未填产品本月产量或月产值'; }
+    else if (P1 > 0 && P1 === probeEff) { trig6 = true; cond6 = '产品本月产量与本月产值（' + (probeFromX0 ? '本期月产值' : '拟报数') + '）数值完全相同（疑似复制，建议核实）'; }
+    else { trig6 = false; cond6 = '产品本月产量与产值数值不同（正常）'; }
+    pushProd('产品与总产值数值一致提醒', 'C02007', 'C', trig6, cond6, '如无误请填写说明。');
+  } else {
+    rows.push(mk('产品产量相关审核（同比/累计/关系式/上限等）', 'C30007等', 'C', null, null, '本企业选择"不需要填报产品产量"，产品类审核自动跳过', '—', true));
+  }
+
+  // 区间计算
+  var lows = [], ups = [];
+  var lowsNoC24 = [], upsNoC24 = [];
+  var lowNames = {}, upNames = {};
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (typeof r.low === 'number' && !isNaN(r.low)) {
+      if (!r.syncOnly) lows.push({ v: r.low, n: r.name + '（' + r.code + '）' });
+      if (r.code !== 'C04001') lowsNoC24.push({ v: r.low, n: r.name + '（' + r.code + '）' });
+    }
+    if (typeof r.up === 'number' && !isNaN(r.up)) {
+      if (!r.syncOnly) ups.push({ v: r.up, n: r.name + '（' + r.code + '）' });
+      if (r.code !== 'C04001') upsNoC24.push({ v: r.up, n: r.name + '（' + r.code + '）' });
+    }
+  }
+  function maxOf(arr) { if (!arr.length) return null; var m = arr[0]; for (var i = 1; i < arr.length; i++) if (arr[i].v > m.v) m = arr[i]; return m; }
+  function minOf(arr) { if (!arr.length) return null; var m = arr[0]; for (var i = 1; i < arr.length; i++) if (arr[i].v < m.v) m = arr[i]; return m; }
+  var lo1 = maxOf(lows), up1 = minOf(ups);
+  var lo2 = maxOf(lowsNoC24), up2 = minOf(upsNoC24);
+  var anyNa = false;
+  for (var i = 0; i < rows.length; i++) { if (rows[i].na) { anyNa = true; break; } }
+
+  results = { lo1: (lo1 ? lo1.v : null), up1: (up1 ? up1.v : null), lo2: (lo2 ? lo2.v : null), up2: (up2 ? up2.v : null),
+    lo1n: (lo1 ? lo1.n : ''), up1n: (up1 ? up1.n : ''), lo2n: (lo2 ? lo2.n : ''), up2n: (up2 ? up2.n : ''), probe: probe, X0: X0 };
+
+  var ok1 = lo1 && up1 && lo1.v <= up1.v;
+  var ok2 = lo2 && up2 && lo2.v <= up2.v;
+  var bd2 = document.getElementById('bandBox2');
+  if (cumSync) {
+    bd2.style.display = 'none';
+    document.getElementById('r_b1t').innerHTML = '可动区间（按"累计同步调整"口径）';
+    document.getElementById('r_band1').innerHTML = ok2 ? ('[' + fmt(lo2.v) + '，' + fmt(up2.v) + '] 万') : (lo2 && up2 ? '约束冲突（无重叠区间）' : '数据不足');
+    document.getElementById('r_band1d').innerHTML = ok2 ? ('下限由<b>' + esc(lo2.n) + '</b>锁定；上限由<b>' + esc(up2.n) + '</b>锁定。<br>（累计已按"上月止累计+本月"同步，衔接自动满足）') : (lo2 && up2 ? ('下限 ' + fmt(lo2.v) + ' 高于上限 ' + fmt(up2.v) + '：需先核对用电、累计等输入。') : '请补充数据后重算。');
+  } else {
+    bd2.style.display = '';
+    document.getElementById('r_b1t').innerHTML = '保守口径（累计不随调整）';
+    document.getElementById('r_band1').innerHTML = ok1 ? ('[' + fmt(lo1.v) + '，' + fmt(up1.v) + '] 万') : (lo1 && up1 ? '约束冲突（无重叠区间）' : '数据不足');
+    document.getElementById('r_band1d').innerHTML = ok1 ? ('下限由<b>' + esc(lo1.n) + '</b>锁定；上限由<b>' + esc(up1.n) + '</b>锁定。<br>（最安全口径：累计数字不动）') : (lo1 && up1 ? ('下限 ' + fmt(lo1.v) + ' 高于上限 ' + fmt(up1.v) + '：按当前数据无法同时满足全部约束，需先核对口径。') : '请补充数据后重算。');
+    document.getElementById('r_band2').innerHTML = ok2 ? ('[' + fmt(lo2.v) + '，' + fmt(up2.v) + '] 万') : (lo2 && up2 ? '约束冲突（无重叠区间）' : '数据不足');
+    document.getElementById('r_band2d').innerHTML = ok2 ? ('下限由<b>' + esc(lo2.n) + '</b>锁定；上限由<b>' + esc(up2.n) + '</b>锁定。<br>（推荐：累计同步调整，实务常用）') : (lo2 && up2 ? ('下限 ' + fmt(lo2.v) + ' 高于上限 ' + fmt(up2.v) + '：需先核对用电与累计等输入。') : '多数字段留空时无法计算推荐口径，请补充数据后重算。');
+  }
+
+  var bind = document.getElementById('bindingBox');
+  bind.style.display = '';
+  var bindNote = anyNa ? '<br><span style="color:#999">（部分约束因数据不足未参与计算，以系统实际为准）</span>' : '';
+  if (ok2) {
+    var baseTxt = (Ent ? '【' + Ent + '】' : '') + (!isNaN(X0) ? ('真实值 ' + fmt(X0) + ' 万；') : (isNaN(probeEff) ? '' : ('拟报数 ' + fmt(probeEff) + ' 万：')));
+    bind.innerHTML = '<b>速读：</b>' + baseTxt + '如需调增，空间到 <b>' + fmt(up2.v) + ' 万</b>为止（最紧的是：' + esc(up2.n) + '）；调减下探空间到 <b>' + fmt(lo2.v) + ' 万</b>（最紧的是：' + esc(lo2.n) + '）。' + bindNote;
+  } else if (lo2 && up2) {
+    bind.innerHTML = '<b>速读：</b>区间约束冲突（下限高于上限）：按当前数据无论怎么调都至少触发一条约束，请先核对用电、累计等输入。' + bindNote;
+  } else {
+    bind.innerHTML = '<b>速读：</b>数据不足以计算推荐口径区间。当前保守口径区间为 ' + ((lo1 && up1) ? ('[' + fmt(lo1.v) + '，' + fmt(up1.v) + ']') : '（数据不足）') + '，上限由 ' + esc(up1 ? up1.n : '—') + ' 锁定。' + bindNote;
+  }
+  var deriveHtml = '';
+  if (!isNaN(probeEff) && !isNaN(PrevCum)) {
+    var cumAfter = PrevCum + probeEff;
+    var cumYoy = (!isNaN(XCly) && XCly > 0) ? (cumAfter / XCly - 1) : null;
+    deriveHtml = '<br><b>拟报后累计' + (probeFromX0 ? '（未填拟报数，按本期月产值）' : '') + '：</b>' + fmt(PrevCum) + ' + ' + fmt(probeEff) + ' = <b>' + fmt(cumAfter) + ' 万</b>' + (cumYoy !== null ? '（累计同比 ' + fmt(cumYoy * 100) + '%）' : '') + '。';
+    if (!isNaN(XC) && !isNaN(X0)) {
+      var chk = XC - (PrevCum + X0);
+      var okChk = Math.abs(chk) <= 0.05 * Math.max(X0, 1);
+      deriveHtml += '　<span style="color:' + (okChk ? '#3a6b4a' : '#b25e00') + '">衔接核对（真实数据）：' + (okChk ? '正常' : '差值 ' + fmt(chk) + '，建议核实') + '（本月累计 ' + fmt(XC) + ' vs 上月止累计+本月真实 ' + fmt(PrevCum + X0) + '）</span>';
+    }
+  }
+  if (deriveHtml) { bind.innerHTML += deriveHtml; }
+
+  // 明细表
+  var tb = '';
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    var chk = '—';
+    var cls = 'b-gray';
+    if (r.na) { chk = '不适用'; }
+    else if (r.syncOK) { chk = '同步即满足'; cls = 'b-green'; }
+    else if (r.evalNow) {
+      if (r.trigFlag === null || typeof r.trigFlag === 'undefined') { chk = '待定'; cls = 'b-orange'; }
+      else if (r.trigFlag) { chk = '触发'; cls = r.cat === 'B' ? 'b-red' : 'b-orange'; }
+      else { chk = '不触发'; cls = 'b-green'; }
+    }
+    else if (!isNaN(probeEff)) {
+      var trig = (typeof r.up === 'number' && probeEff > r.up) || (typeof r.low === 'number' && probeEff < r.low);
+      var hasLimit = typeof r.up === 'number' || typeof r.low === 'number';
+      if (!hasLimit && r.refUnknown) { chk = '待定'; cls = 'b-orange'; }
+      else if (trig) { chk = '触发'; cls = r.cat === 'B' ? 'b-red' : 'b-orange'; }
+      else { chk = '不触发'; cls = 'b-green'; }
+    }
+    var catCls = r.cat === 'B' ? 'b-red' : (r.cat === 'A' ? 'b-red' : 'b-orange');
+    tb += '<tr>' +
+      '<td>' + esc(r.name) + '</td>' +
+      '<td class="ctr">' + r.code + '</td>' +
+      '<td class="num">' + (typeof r.up === 'number' ? fmt(r.up) : (r.na ? '—' : (r.refUnknown ? '未知' : '—'))) + '</td>' +
+      '<td class="num">' + (typeof r.low === 'number' ? fmt(r.low) : '—') + '</td>' +
+      '<td class="ctr"><span class="badge ' + cls + '">' + chk + '</span></td>' +
+      '<td class="ctr"><span class="badge ' + catCls + '">' + r.cat + '类</span></td>' +
+      '<td>' + esc(r.cond) + '</td></tr>';
+  }
+  document.getElementById('tbody').innerHTML = tb;
+
+  // 触发清单
+  var zone = document.getElementById('triggerZone');
+  var hits = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (r.na) continue;
+    var trig = false;
+    if (r.evalNow) { trig = (r.trigFlag === true); }
+    else { trig = (typeof r.up === 'number' && !isNaN(probeEff) && probeEff > r.up) || (typeof r.low === 'number' && !isNaN(probeEff) && probeEff < r.low); }
+    if (trig) hits.push(r);
+  }
+  if (isNaN(probeEff) && hits.length === 0) {
+    zone.innerHTML = '<div class="warnbox">请填入"拟报数"或"本期月产值"（任填其一，点"开始测算"），这里会列出会触发的查询及处理办法。</div>';
+  } else {
+    var html = '';
+    if (hits.length === 0) {
+      var fallback = (lo2 && up2) ? ('落在推荐区间 [' + fmt(lo2.v) + '，' + fmt(up2.v) + '] 内。') : '已按可用数据判断（部分约束因数据不足未参与）。';
+      html = '<div class="okbox"><b>' + (isNaN(probeEff) ? '' : ((probeFromX0 ? '本期月产值 ' : '拟报数 ') + fmt(probeEff) + ' 万：')) + '预计不触发说明/解锁类审核。</b><br>' +
+        fallback + ' 提醒："未触发"只是无需额外说明，数据仍须据实填报。</div>';
+    } else {
+      var headText;
+      if (!isNaN(probeEff)) {
+        headText = (probeFromX0 ? '本期月产值 ' : '拟报数 ') + '<b>' + fmt(probeEff) + ' 万</b>' + (hasProd ? '（及已填写的产品数据）' : '') + ' 将触发以下 ' + hits.length + ' 条审核';
+      } else {
+        headText = '按填写的产品数据，将触发以下 ' + hits.length + ' 条产品类审核';
+      }
+      html = '<div class="warnbox" style="border-left-color:#d6453d;background:#fdf1f0;color:#8a2a22;">' + headText + '（另有"往期对比"通常未知，以系统实际提示为准）：</div>';
+      for (var i = 0; i < hits.length; i++) {
+        var r = hits[i];
+        var cls2 = r.cat === 'B' ? 'titem b' : 'titem';
+        var who = r.who || (r.cat === 'B' ? '拦截 → 凭证材料 → 统计机构解锁后上报' : '可上报，需填写说明（留痕）');
+        html += '<div class="' + cls2 + '">' +
+          '<div class="tname">【' + r.cat + '类】' + esc(r.name) + '　<span style="color:#888;font-weight:normal;">（' + r.code + '）</span></div>' +
+          '<div class="tmeta">触发条件：' + esc(r.cond) + (r.evalNow ? '　（依据填写的产品数据自动判定）' : '') + '</div>' +
+          '<div class="tmeta">处理：' + who + '。' + esc(r.sug) + '</div>' +
+          '</div>';
+      }
+    }
+    var prodNote = hasProd ? '④产品产量须符合产品目录、部分产品必须为整数（A类）；产品间"合计/包含"关系式88组、单产品上限599条均为B类（需解锁），由系统内置、以系统提示为准；填了产品产量应有对应行业小类产值（C类）。' : '';
+    html += '<div class="warnbox"><b>硬性提醒（任何情况）：</b>①产值必须等于分行业小类之和（A类，报不出去、不可解锁）；②上年同期数由国家统一复制，不可修改；③累计数字只增不减，本月调增的部分会沉淀在累计里。' + prodNote + '</div>';
+    zone.innerHTML = html;
+  }
+
+  document.getElementById('resultCard').className = 'card';
+  document.getElementById('copyBtn').style.display = '';
+  document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+}
+
+function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+function toggleProd() {
+  var v = document.getElementById('f_hasProd').value === '1';
+  var b = document.getElementById('prodBlock'), h = document.getElementById('prodHead');
+  if (b) b.style.display = v ? '' : 'none';
+  if (h) h.style.display = v ? '' : 'none';
+}
+
+function fillDemo() {
+  document.getElementById('f_Ent').value = '';
+  document.getElementById('f_X0').value = 1430; document.getElementById('f_Ply').value = 1610;
+  document.getElementById('f_m1').value = 900; document.getElementById('f_m2').value = 850; document.getElementById('f_m3').value = 950;
+  document.getElementById('f_Ind').value = 1000; document.getElementById('f_Sreal').value = 1430; document.getElementById('f_Sly').value = 1590;
+  document.getElementById('f_Gpow').value = '-5'; document.getElementById('f_wand').value = '1';
+  document.getElementById('f_hasProd').value = '1';
+  document.getElementById('f_P1').value = 5000; document.getElementById('f_P2').value = 46000;
+  document.getElementById('f_P3').value = 5200; document.getElementById('f_P4').value = 41000;
+  document.getElementById('f_ref').value = ''; document.getElementById('f_probe').value = 2430;
+  document.getElementById('f_PrevCum').value = 6678;
+  document.getElementById('f_XC').value = 8108; document.getElementById('f_XCly').value = 9630;
+  document.getElementById('f_cumSync').value = '1';
+  toggleProd();
+}
+function clearAll() {
+  var ids = ['f_Ent', 'f_X0', 'f_Ply', 'f_m1', 'f_m2', 'f_m3', 'f_Ind', 'f_Sreal', 'f_Sly', 'f_Gpow', 'f_ref', 'f_probe', 'f_P1', 'f_P2', 'f_P3', 'f_P4', 'f_PrevCum', 'f_XC', 'f_XCly'];
+  for (var i = 0; i < ids.length; i++) document.getElementById(ids[i]).value = '';
+  document.getElementById('f_cumSync').value = '1';
+}
+function copyResult() {
+  function fmtv(x) { return (x == null || isNaN(x)) ? '—' : fmt(x); }
+  var entName = String(document.getElementById('f_Ent').value || '').replace(/^\s+|\s+$/g, '');
+  var cs = document.getElementById('f_cumSync').value === '1';
+  var t = (entName ? '【' + entName + '】' : '') + '产值可动区间测算（' + new Date().toLocaleString() + '）\n' +
+    (cs ? ('可动区间（累计同步调整）：[' + fmtv(results.lo2) + '，' + fmtv(results.up2) + ']万（上限锁定：' + (results.up2n || '—') + '）\n')
+        : ('保守口径：[' + fmtv(results.lo1) + '，' + fmtv(results.up1) + ']万（上限锁定：' + (results.up1n || '—') + '）\n' +
+           '推荐口径：[' + fmtv(results.lo2) + '，' + fmtv(results.up2) + ']万（上限锁定：' + (results.up2n || '—') + '）\n')) +
+    (isNaN(results.probe) ? '' : ('拟报数：' + fmtv(results.probe) + '万\n'));
+  var ta = document.createElement('textarea');
+  ta.value = t; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); alert('已复制，可粘贴到微信/文档里。'); } catch (e) { alert('复制失败，请手动记录。'); }
+  document.body.removeChild(ta);
+}
+
+toggleProd();
+</script>
+</body>
+</html>
